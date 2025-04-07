@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+NEVER RUN `cargo clean`, it wipes out caches and takes forever to rebuild.
+
+ALWAYS check for lint errors with `cargo clippy` when you're done and address them before moving on.
+Never run the game without checking clippy first.
+
+When making changes to the game, always verify your changes with at least these steps:
+1. Make sure game isn't already running
+2. Run the game (fork to background), log to a file
+3. Wait a few seconds for the game to start
+4. Checks the logs for any issues
+5. Screenshot the game window and inspect against changes
+6. Send keyboard input to the game (as needed)
+7. (Optional) Repeat 3-4 to keep testing the game to verify behavior
+
+You should use a combination of the screenshots, keyboard input, and logging to verify the behavior.
