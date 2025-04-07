@@ -1,10 +1,9 @@
-use bevy::prelude::*;
-
 mod ant;
 mod colony;
 mod terrain;
 
 use ant::AntPlugin;
+use bevy::prelude::*;
 use colony::ColonyPlugin;
 use terrain::TerrainPlugin;
 

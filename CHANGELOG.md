@@ -30,6 +30,14 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - Fixed integer overflow issues in chunk generation
 - Improved terrain feature rendering with proper mesh generation
 - Enhanced color scheme for better visual distinction between terrain types
+- Refactored ant module into separate components:
+  - `src/ant/mod.rs`: Main module file with plugin setup
+  - `src/ant/components.rs`: Ant-related components and constants
+  - `src/ant/systems.rs`: Systems for ant movement and interaction
+  - `src/ant/behaviors.rs`: Core ant behavior logic
+- Improved code organization and maintainability
+- Enhanced ant movement and digging behavior
+- Added better logging for ant state changes and actions
 
 ### Fixed
 
