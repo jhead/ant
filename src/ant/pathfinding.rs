@@ -110,11 +110,18 @@ pub fn find_nearest_accessible_point(
                     continue;
                 }
 
-                let new_g_cost = g_costs[&current.pos] + 1;
+                // Calculate movement cost - diagonal movement costs more
+                let movement_cost = if dx.abs() == 1 && dy.abs() == 1 {
+                    14 // Approximately sqrt(2) * 10
+                } else {
+                    10 // Base movement cost
+                };
+
+                let new_g_cost = g_costs[&current.pos] + movement_cost;
                 if !g_costs.contains_key(&neighbor_pos) || new_g_cost < g_costs[&neighbor_pos] {
                     came_from.insert(neighbor_pos, current.pos);
                     g_costs.insert(neighbor_pos, new_g_cost);
-                    let h_cost = neighbor_pos.distance(&target_pos) as i32;
+                    let h_cost = (neighbor_pos.distance(&target_pos) * 10.0) as i32;
                     let f_cost = new_g_cost + h_cost;
 
                     let neighbor = Node {
@@ -187,11 +194,18 @@ pub fn find_path(start: Vec2, end: Vec2, solid_tiles: &[Vec2]) -> Option<Vec<Vec
                     continue;
                 }
 
-                let new_g_cost = g_costs[&current.pos] + 1;
+                // Calculate movement cost - diagonal movement costs more
+                let movement_cost = if dx.abs() == 1 && dy.abs() == 1 {
+                    14 // Approximately sqrt(2) * 10
+                } else {
+                    10 // Base movement cost
+                };
+
+                let new_g_cost = g_costs[&current.pos] + movement_cost;
                 if !g_costs.contains_key(&neighbor_pos) || new_g_cost < g_costs[&neighbor_pos] {
                     came_from.insert(neighbor_pos, current.pos);
                     g_costs.insert(neighbor_pos, new_g_cost);
-                    let h_cost = neighbor_pos.distance(&end_pos) as i32;
+                    let h_cost = (neighbor_pos.distance(&end_pos) * 10.0) as i32;
                     let f_cost = new_g_cost + h_cost;
 
                     let neighbor = Node {
