@@ -36,6 +36,9 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - Added `TilePosition` wrapper to handle Vec2 hashing for HashMap keys
 - Enhanced terrain generation with proper tile type conversion
 - Improved cavity creation by converting tiles to air instead of removing them
+- New spacebar spawn system to create additional worker ants
+- Enhanced logging for ant spawning and movement
+- Improved ant movement system with better pathfinding
 
 ### Changed
 
