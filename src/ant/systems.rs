@@ -1,9 +1,9 @@
 use crate::ant::components::{
     Ant, AntCommand, AntRole, WorkerState, ANT_SPEED, MAX_COLONY_DISTANCE,
 };
-use crate::ant::pathfinding::{find_nearest_accessible_point, find_path};
+use crate::ant::pathfinding::{find_nearest_accessible_point, find_path, GridPos};
 use crate::colony::{Colony, ColonyMember};
-use crate::terrain::TileStore;
+use crate::terrain::{AirTile, Tile, TileStore, TileUpdateEvent, TILE_SIZE};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
@@ -90,7 +90,9 @@ pub fn ant_movement(
     mut query: Query<(&Transform, &mut Ant, &mut Velocity, &ColonyMember)>,
     colony_query: Query<&Colony>,
     _time: Res<Time>,
-    tile_store: Res<TileStore>,
+    mut tile_store: ResMut<TileStore>,
+    mut tile_update_events: EventWriter<TileUpdateEvent>,
+    tile_query: Query<(Entity, &Tile)>,
 ) {
     for (transform, mut ant, mut velocity, colony_member) in query.iter_mut() {
         if let Some(target_pos) = ant.target_position {
@@ -109,6 +111,50 @@ pub fn ant_movement(
                 }
             }
 
+            // Handle digging state first
+            if let WorkerState::Digging(dig_target) = ant.worker_state {
+                // Calculate direction to dig target
+                let to_target = dig_target - current_pos;
+                let dig_direction = to_target.normalize();
+
+                // Find the next tile to dig in the direction of the target
+                let next_pos = current_pos + dig_direction * TILE_SIZE;
+                let grid_pos = GridPos::from_vec2(next_pos).to_vec2();
+
+                // Check if we've reached the target
+                if current_pos.distance(dig_target) < TILE_SIZE {
+                    println!("Reached dig target at {:?}", dig_target);
+                    velocity.linvel = Vec2::ZERO;
+                    ant.target_position = None;
+                    ant.worker_state = WorkerState::SearchingForDigSite;
+                    continue;
+                }
+
+                // Try to dig the tile
+                if let Some(tile) = tile_store.get_tile_mut(&grid_pos) {
+                    if tile.tile_type.is_solid() {
+                        println!("Digging tile at {:?}", grid_pos);
+                        // Find the entity for this tile to update its visual
+                        for (entity, tile) in tile_query.iter() {
+                            if tile.position == grid_pos {
+                                tile_update_events.send(TileUpdateEvent {
+                                    entity,
+                                    new_type: Box::new(AirTile),
+                                });
+                                break;
+                            }
+                        }
+                        // Update the tile in the store
+                        tile.tile_type = Box::new(AirTile);
+
+                        // Move towards the dug tile
+                        velocity.linvel = dig_direction * ANT_SPEED * 0.5; // Move slower while digging
+                    }
+                }
+                continue;
+            }
+
+            // Rest of the movement code...
             // Check if we're close enough to the final destination
             let distance_to_target = (target_pos - current_pos).length();
             if distance_to_target < 5.0 {
