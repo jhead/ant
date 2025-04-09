@@ -1,13 +1,17 @@
-use super::{behaviors::*, components::*};
+use crate::ant::components::{
+    Ant, AntCommand, AntRole, WorkerState, ANT_SPEED, MAX_COLONY_DISTANCE,
+};
+use crate::ant::pathfinding::{find_nearest_accessible_point, find_path};
 use crate::colony::{Colony, ColonyMember};
-use crate::terrain::{Tile, TILE_SIZE};
+use crate::terrain::TileStore;
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 pub fn handle_mouse_click(
     mouse_input: Res<Input<MouseButton>>,
     windows: Query<&Window>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
-    mut ants: Query<&mut Ant>,
+    mut query: Query<(&Transform, &mut Ant, &mut Velocity)>,
 ) {
     if mouse_input.just_pressed(MouseButton::Left) {
         if let Ok(window) = windows.get_single() {
@@ -16,10 +20,23 @@ pub fn handle_mouse_click(
                     if let Some(world_pos) =
                         camera.viewport_to_world_2d(camera_transform, cursor_pos)
                     {
-                        println!("Issuing move command to position: {:?}", world_pos);
-                        for mut ant in ants.iter_mut() {
-                            ant.command = AntCommand::MoveTo(world_pos);
+                        println!("Issuing new move command to position: {:?}", world_pos);
+                        for (transform, mut ant, mut velocity) in query.iter_mut() {
+                            // Immediately stop current movement
+                            velocity.linvel = Vec2::ZERO;
+
+                            // Clear existing path
+                            ant.current_path = None;
+                            ant.current_path_index = 0;
+
+                            // Set new target
+                            ant.target_position = Some(world_pos);
                             ant.worker_state = WorkerState::SearchingForDigSite;
+
+                            println!(
+                                "Interrupted ant at {:?}, setting new target",
+                                transform.translation.truncate()
+                            );
                         }
                     }
                 }
@@ -41,15 +58,26 @@ pub fn spawn_initial_ant(mut commands: Commands, colony_query: Query<Entity, Wit
                 ..default()
             },
             Ant {
-                speed: 50.0,
+                speed: ANT_SPEED,
                 direction: Vec2::new(1.0, 0.0),
                 on_ground: false,
                 command: AntCommand::Work,
                 role: AntRole::Worker,
                 worker_state: WorkerState::SearchingForDigSite,
                 search_timer: Timer::from_seconds(2.0, TimerMode::Repeating),
+                target_position: None,
+                current_path: None,
+                current_path_index: 0,
             },
             ColonyMember { colony_id },
+            RigidBody::Dynamic,
+            Velocity::default(),
+            Collider::ball(2.5),         // Half the width of the sprite
+            LockedAxes::ROTATION_LOCKED, // Prevent rotation
+            Damping {
+                linear_damping: 0.5, // Reduced damping for faster movement
+                angular_damping: 1.0,
+            },
         ));
 
         println!("Worker ant spawned at (0,0) for colony {:?}", colony_id);
@@ -59,155 +87,128 @@ pub fn spawn_initial_ant(mut commands: Commands, colony_query: Query<Entity, Wit
 }
 
 pub fn ant_movement(
-    time: Res<Time>,
-    mut query_set: ParamSet<(
-        Query<(&mut Transform, &mut Ant, &ColonyMember)>,
-        Query<(&Transform, &mut Tile, &mut Sprite)>,
-        Query<&Transform, With<Colony>>,
-    )>,
+    mut query: Query<(&Transform, &mut Ant, &mut Velocity, &ColonyMember)>,
+    colony_query: Query<&Colony>,
+    _time: Res<Time>,
+    tile_store: Res<TileStore>,
 ) {
-    let mut ant_positions = Vec::new();
-    let mut ant_on_grounds = Vec::new();
-    let mut ant_directions = Vec::new();
-    let mut ant_commands = Vec::new();
-    let mut ant_worker_states = Vec::new();
-    let mut ant_search_timers = Vec::new();
-    let mut dig_positions = Vec::new();
+    for (transform, mut ant, mut velocity, colony_member) in query.iter_mut() {
+        if let Some(target_pos) = ant.target_position {
+            let current_pos = transform.translation.truncate();
 
-    // Get colony position
-    let colony_pos = if let Ok(colony_transform) = query_set.p2().get_single() {
-        colony_transform.translation.truncate()
-    } else {
-        Vec2::ZERO
-    };
-
-    // Gather all terrain positions
-    let terrain_positions: Vec<_> = query_set
-        .p1()
-        .iter()
-        .filter(|(_, tile, _)| tile.is_solid)
-        .map(|(transform, _, _)| transform.translation.truncate())
-        .collect();
-
-    // Process ant movement
-    for (transform, ant, _colony_member) in query_set.p0().iter_mut() {
-        let mut new_pos = transform.translation.truncate();
-        let mut new_on_ground = false;
-        let mut new_direction = ant.direction;
-        let mut new_command = ant.command;
-        let mut new_worker_state = ant.worker_state;
-        let mut new_search_timer = ant.search_timer.clone();
-
-        let distance_to_colony = (new_pos - colony_pos).length();
-        if distance_to_colony > MAX_COLONY_DISTANCE {
-            let to_colony = (colony_pos - new_pos).normalize();
-            new_direction = to_colony;
-            println!(
-                "Ant too far from colony ({:.1}), returning",
-                distance_to_colony
-            );
-        } else {
-            match ant.command {
-                AntCommand::MoveTo(target_pos) => {
-                    if handle_move_command(new_pos, target_pos, &mut new_direction) {
-                        new_command = AntCommand::Work;
-                        println!("Move command complete, returning to work");
-                    }
+            // Get colony position and check distance
+            if let Ok(colony) = colony_query.get(colony_member.colony_id) {
+                let distance_to_colony = (colony.position - current_pos).length();
+                if distance_to_colony > MAX_COLONY_DISTANCE {
+                    println!(
+                        "Target too far from colony ({} > {}), returning to colony",
+                        distance_to_colony, MAX_COLONY_DISTANCE
+                    );
+                    ant.target_position = Some(colony.position);
+                    continue;
                 }
-                AntCommand::Work => match ant.role {
-                    AntRole::Worker => {
-                        if let Some(dig_pos) = handle_worker_work(
-                            new_pos,
-                            colony_pos,
-                            &terrain_positions,
-                            &mut new_worker_state,
-                            &mut new_direction,
-                            &mut new_search_timer,
-                            &time,
-                        ) {
-                            dig_positions.push(dig_pos);
-                        }
-                    }
-                },
             }
-        }
 
-        // Calculate and apply movement
-        let movement = new_direction * ant.speed * time.delta_seconds();
-        new_pos += movement;
+            // Check if we're close enough to the final destination
+            let distance_to_target = (target_pos - current_pos).length();
+            if distance_to_target < 5.0 {
+                println!(
+                    "Reached final destination at {:?}, distance: {}",
+                    current_pos, distance_to_target
+                );
+                velocity.linvel = Vec2::ZERO;
+                ant.target_position = None;
+                ant.current_path = None;
+                ant.current_path_index = 0;
+                continue;
+            }
 
-        // Handle collisions
-        let ant_size = 5.0;
-        let half_size = ant_size / 2.0;
-        let half_tile = TILE_SIZE / 2.0;
-
-        for &terrain_pos in &terrain_positions {
-            if new_pos.x + half_size > terrain_pos.x - half_tile
-                && new_pos.x - half_size < terrain_pos.x + half_tile
-                && new_pos.y + half_size > terrain_pos.y - half_tile
-                && new_pos.y - half_size < terrain_pos.y + half_tile
+            // If we don't have a path or need to recalculate
+            if ant.current_path.is_none()
+                || ant.current_path_index >= ant.current_path.as_ref().unwrap().len()
             {
-                if movement.y < 0.0 && transform.translation.y > terrain_pos.y {
-                    new_pos.y = terrain_pos.y + half_tile + half_size;
-                    new_on_ground = true;
-                } else if movement.y > 0.0 && transform.translation.y < terrain_pos.y {
-                    new_pos.y = terrain_pos.y - half_tile - half_size;
-                } else if movement.x != 0.0 {
-                    if transform.translation.x < terrain_pos.x {
-                        new_pos.x = terrain_pos.x - half_tile - half_size;
-                    } else {
-                        new_pos.x = terrain_pos.x + half_tile + half_size;
+                println!("Finding path to target at {:?}", target_pos);
+
+                // First, find the nearest accessible point to the target
+                let solid_tiles = tile_store.get_solid_tiles();
+                if let Some(accessible_point) =
+                    find_nearest_accessible_point(current_pos, target_pos, &solid_tiles)
+                {
+                    println!("Found nearest accessible point at {:?}", accessible_point);
+
+                    // If we're at the accessible point, start digging
+                    let distance_to_accessible = (accessible_point - current_pos).length();
+                    if distance_to_accessible < 5.0 {
+                        println!("Reached accessible point, starting to dig towards target");
+                        ant.worker_state = WorkerState::Digging(target_pos);
+                        velocity.linvel = Vec2::ZERO;
+                        continue;
                     }
-                    new_direction.x *= -1.0;
-                }
-            }
-        }
 
-        ant_positions.push(new_pos);
-        ant_on_grounds.push(new_on_ground);
-        ant_directions.push(new_direction);
-        ant_commands.push(new_command);
-        ant_worker_states.push(new_worker_state);
-        ant_search_timers.push(new_search_timer);
-    }
-
-    // Update terrain (dig)
-    if !dig_positions.is_empty() {
-        println!("Processing {} dig positions", dig_positions.len());
-        let mut terrain_query = query_set.p1();
-        for dig_pos in dig_positions {
-            println!("Attempting to dig at position {:?}", dig_pos);
-            let mut tiles_dug = 0;
-            for (transform, mut tile, mut sprite) in terrain_query.iter_mut() {
-                let tile_pos = transform.translation.truncate();
-                if tile_pos.distance(dig_pos) < TILE_SIZE {
-                    if tile.is_solid {
-                        tile.is_solid = false;
-                        sprite.color = Color::rgba(0.0, 0.0, 0.0, 0.0); // Make tile transparent
-                        tiles_dug += 1;
+                    // Otherwise, find a path to the accessible point
+                    if let Some(path) = find_path(current_pos, accessible_point, &solid_tiles) {
                         println!(
-                            "Dug tile at {:?} (distance: {:.1})",
-                            tile_pos,
-                            tile_pos.distance(dig_pos)
+                            "Found path with {} waypoints to accessible point",
+                            path.len()
                         );
+                        ant.current_path = Some(path);
+                        ant.current_path_index = 0;
+                    } else {
+                        println!("No path found to accessible point");
+                        velocity.linvel = Vec2::ZERO;
+                        ant.target_position = None;
+                        continue;
                     }
+                } else {
+                    println!("No accessible point found near target");
+                    velocity.linvel = Vec2::ZERO;
+                    ant.target_position = None;
+                    continue;
                 }
             }
-            println!("Dug {} tiles around position {:?}", tiles_dug, dig_pos);
-        }
-    }
 
-    // Update ant states
-    let mut ant_query = query_set.p0();
-    for i in 0..ant_positions.len() {
-        if let Some((mut transform, mut ant, _)) = ant_query.iter_mut().nth(i) {
-            transform.translation.x = ant_positions[i].x;
-            transform.translation.y = ant_positions[i].y;
-            ant.on_ground = ant_on_grounds[i];
-            ant.direction = ant_directions[i];
-            ant.command = ant_commands[i];
-            ant.worker_state = ant_worker_states[i];
-            ant.search_timer = ant_search_timers[i].clone();
+            // Follow the current path
+            let path_len = ant.current_path.as_ref().map(|p| p.len()).unwrap_or(0);
+            let current_index = ant.current_path_index;
+
+            if current_index < path_len {
+                let next_waypoint = ant.current_path.as_ref().unwrap()[current_index];
+                let to_target = next_waypoint - current_pos;
+                let distance = to_target.length();
+
+                // Increased threshold for waypoint detection
+                if distance < 2.0 {
+                    println!(
+                        "Reached waypoint {} at {:?}, distance: {}",
+                        current_index, next_waypoint, distance
+                    );
+
+                    // Update path index
+                    ant.current_path_index += 1;
+
+                    // Only zero velocity if we're at the final waypoint
+                    if ant.current_path_index >= path_len {
+                        velocity.linvel = Vec2::ZERO;
+                    }
+                } else {
+                    let direction = to_target.normalize();
+                    // Apply a stronger impulse when starting to move
+                    if velocity.linvel.length() < 10.0 {
+                        velocity.linvel = direction * ANT_SPEED * 1.5;
+                    } else {
+                        velocity.linvel = direction * ANT_SPEED;
+                    }
+                }
+            } else {
+                // We've reached the end of our path
+                println!("Reached final destination at {:?}", current_pos);
+                velocity.linvel = Vec2::ZERO;
+                ant.target_position = None;
+                ant.current_path = None;
+                ant.current_path_index = 0;
+            }
+        } else {
+            velocity.linvel = Vec2::ZERO;
         }
     }
 }

@@ -9,6 +9,7 @@ pub const BRANCH_CHANCE: f32 = 0.05;
 pub const PREFERRED_DIG_ANGLE: f32 = std::f32::consts::FRAC_PI_4;
 pub const SEARCH_RADIUS: f32 = 100.0;
 pub const MAX_SEARCH_ATTEMPTS: i32 = 8;
+pub const ANT_SPEED: f32 = 100.0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AntCommand {
@@ -49,4 +50,24 @@ pub struct Ant {
     pub role: AntRole,
     pub worker_state: WorkerState,
     pub search_timer: Timer,
+    pub target_position: Option<Vec2>,
+    pub current_path: Option<Vec<Vec2>>,
+    pub current_path_index: usize,
+}
+
+impl Default for Ant {
+    fn default() -> Self {
+        Self {
+            speed: ANT_SPEED,
+            direction: Vec2::ZERO,
+            on_ground: false,
+            command: AntCommand::default(),
+            role: AntRole::default(),
+            worker_state: WorkerState::SearchingForDigSite,
+            search_timer: Timer::from_seconds(0.1, TimerMode::Repeating),
+            target_position: None,
+            current_path: None,
+            current_path_index: 0,
+        }
+    }
 }

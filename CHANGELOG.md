@@ -21,6 +21,21 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - Camera controls for exploring the world
 - Chunk-based terrain loading system
 - UI legend showing terrain types and features
+- Colony distance constraints for ant movement
+- Improved pathfinding with terrain obstacle avoidance
+- Enhanced logging for pathfinding decisions and ant movement
+- New pathfinding algorithm to find nearest accessible points
+- Improved digging behavior that respects terrain
+- Two-pass terrain generation approach for improved clarity and maintainability
+- Split `spawn_terrain` into `generate_initial_terrain` and `create_central_cavity` functions
+- New `TileStore` system for efficient tile management and lookup
+- Enhanced ant movement system with improved pathfinding and collision detection
+- Better logging for debugging ant movement and pathfinding
+- New tile type system using traits for flexible terrain representation
+- Implemented `DirtTile` and `AirTile` types with specific behaviors
+- Added `TilePosition` wrapper to handle Vec2 hashing for HashMap keys
+- Enhanced terrain generation with proper tile type conversion
+- Improved cavity creation by converting tiles to air instead of removing them
 
 ### Changed
 
@@ -38,6 +53,20 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - Improved code organization and maintainability
 - Enhanced ant movement and digging behavior
 - Added better logging for ant state changes and actions
+- Ant movement system now respects maximum distance from colony
+- Pathfinding system now properly handles terrain obstacles
+- Improved waypoint detection and movement precision
+- Enhanced logging for debugging ant behavior
+- Ants now find paths to the edge of terrain before digging
+- Digging behavior now properly considers terrain obstacles
+- Refactored terrain generation to use TileStore instead of separate solid tiles list
+- Updated ant movement system to use TileStore for pathfinding
+- Improved waypoint detection threshold for smoother ant movement
+- Enhanced velocity control for better ant acceleration and movement
+- Refactored `TileStore` to use the new tile type system
+- Updated terrain generation to use tile types for better extensibility
+- Modified cavity creation to convert tiles to air instead of removing them
+- Improved tile rendering with type-specific colors
 
 ### Fixed
 
@@ -45,6 +74,11 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - Resolved issues with moved values in mesh generation
 - Fixed camera positioning and zoom settings
 - Addressed compilation errors related to mesh attributes
+- Resolved borrowing conflicts in ant movement system
+- Fixed terrain generation to properly handle tile removal
+- Improved collision detection and pathfinding accuracy
+- Resolved HashMap key issues with Vec2 by implementing custom Hash and Eq traits
+- Fixed terrain generation to properly handle tile type conversion
 
 ### Technical Debt
 

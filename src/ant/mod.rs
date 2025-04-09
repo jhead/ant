@@ -1,5 +1,6 @@
 mod behaviors;
 mod components;
+mod pathfinding;
 mod systems;
 
 use bevy::prelude::*;
