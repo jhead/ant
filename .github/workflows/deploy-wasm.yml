@@ -28,9 +28,8 @@ jobs:
             ${{ runner.os }}-cargo-
             
       - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v1
-        with:
-          version: 'latest'
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           
       - name: Build WASM
         run: make wasm
