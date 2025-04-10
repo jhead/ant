@@ -32,7 +32,13 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           
       - name: Build WASM
-        run: make wasm
+        run: make wasm-dev
+
+      - name: Upload gh pages artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public/
 
   # Deploy job
   deploy:
