@@ -1,0 +1,19 @@
+{
+  "name": "ant",
+  "type": "module",
+  "collaborators": [
+    "Your Name"
+  ],
+  "description": "A procedurally generated ant farm simulation game",
+  "version": "0.1.0",
+  "files": [
+    "ant_bg.wasm",
+    "ant.js",
+    "ant.d.ts"
+  ],
+  "main": "ant.js",
+  "types": "ant.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
