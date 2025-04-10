@@ -3,6 +3,8 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
 const GRID_SIZE: f32 = 8.0; // Same as TILE_SIZE
+const BASE_DIG_COST: i32 = 10; // Base cost for digging
+const MAX_DIG_DISTANCE: f32 = 50.0; // Maximum distance to consider direct digging
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GridPos {
@@ -56,6 +58,12 @@ pub fn find_nearest_accessible_point(
 ) -> Option<Vec2> {
     let start_pos = GridPos::from_vec2(start);
     let target_pos = GridPos::from_vec2(target);
+    let direct_distance = start_pos.distance(&target_pos);
+
+    // If target is very close, prefer digging directly
+    if direct_distance * GRID_SIZE <= MAX_DIG_DISTANCE {
+        return Some(target);
+    }
 
     // Convert solid tiles to grid positions
     let obstacles: HashSet<GridPos> = solid_tiles
@@ -106,7 +114,7 @@ pub fn find_nearest_accessible_point(
                     y: current.pos.y + dy,
                 };
 
-                if closed_set.contains(&neighbor_pos) || obstacles.contains(&neighbor_pos) {
+                if closed_set.contains(&neighbor_pos) {
                     continue;
                 }
 
@@ -117,7 +125,16 @@ pub fn find_nearest_accessible_point(
                     10 // Base movement cost
                 };
 
-                let new_g_cost = g_costs[&current.pos] + movement_cost;
+                // Calculate digging cost based on distance to target
+                let total_cost = if obstacles.contains(&neighbor_pos) {
+                    let distance_factor = (direct_distance * GRID_SIZE / MAX_DIG_DISTANCE).min(1.0);
+                    let dig_cost = (BASE_DIG_COST as f32 * (1.0 + distance_factor)) as i32;
+                    movement_cost + dig_cost
+                } else {
+                    movement_cost
+                };
+
+                let new_g_cost = g_costs[&current.pos] + total_cost;
                 if !g_costs.contains_key(&neighbor_pos) || new_g_cost < g_costs[&neighbor_pos] {
                     came_from.insert(neighbor_pos, current.pos);
                     g_costs.insert(neighbor_pos, new_g_cost);
@@ -141,6 +158,12 @@ pub fn find_nearest_accessible_point(
 pub fn find_path(start: Vec2, end: Vec2, solid_tiles: &[Vec2]) -> Option<Vec<Vec2>> {
     let start_pos = GridPos::from_vec2(start);
     let end_pos = GridPos::from_vec2(end);
+    let direct_distance = start_pos.distance(&end_pos);
+
+    // If target is very close, prefer digging directly
+    if direct_distance * GRID_SIZE <= MAX_DIG_DISTANCE {
+        return Some(vec![start, end]);
+    }
 
     // Convert solid tiles to grid positions
     let obstacles: HashSet<GridPos> = solid_tiles
@@ -190,7 +213,7 @@ pub fn find_path(start: Vec2, end: Vec2, solid_tiles: &[Vec2]) -> Option<Vec<Vec
                     y: current.pos.y + dy,
                 };
 
-                if closed_set.contains(&neighbor_pos) || obstacles.contains(&neighbor_pos) {
+                if closed_set.contains(&neighbor_pos) {
                     continue;
                 }
 
@@ -201,7 +224,16 @@ pub fn find_path(start: Vec2, end: Vec2, solid_tiles: &[Vec2]) -> Option<Vec<Vec
                     10 // Base movement cost
                 };
 
-                let new_g_cost = g_costs[&current.pos] + movement_cost;
+                // Calculate digging cost based on distance to target
+                let total_cost = if obstacles.contains(&neighbor_pos) {
+                    let distance_factor = (direct_distance * GRID_SIZE / MAX_DIG_DISTANCE).min(1.0);
+                    let dig_cost = (BASE_DIG_COST as f32 * (1.0 + distance_factor)) as i32;
+                    movement_cost + dig_cost
+                } else {
+                    movement_cost
+                };
+
+                let new_g_cost = g_costs[&current.pos] + total_cost;
                 if !g_costs.contains_key(&neighbor_pos) || new_g_cost < g_costs[&neighbor_pos] {
                     came_from.insert(neighbor_pos, current.pos);
                     g_costs.insert(neighbor_pos, new_g_cost);

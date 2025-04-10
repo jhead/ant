@@ -119,24 +119,32 @@ pub fn ant_movement(
 
                 // Find the next tile to dig in the direction of the target
                 let next_pos = current_pos + dig_direction * TILE_SIZE;
-                let grid_pos = GridPos::from_vec2(next_pos).to_vec2();
+                let grid_pos = GridPos::from_vec2(next_pos);
 
                 // Check if we've reached the target
                 if current_pos.distance(dig_target) < TILE_SIZE {
                     println!("Reached dig target at {:?}", dig_target);
                     velocity.linvel = Vec2::ZERO;
-                    ant.target_position = None;
+
+                    // Move to the next waypoint in the path
+                    if let Some(path) = &ant.current_path {
+                        if ant.current_path_index < path.len() {
+                            ant.current_path_index += 1;
+                            println!("Moving to next waypoint after digging");
+                        }
+                    }
+
                     ant.worker_state = WorkerState::SearchingForDigSite;
                     continue;
                 }
 
                 // Try to dig the tile
-                if let Some(tile) = tile_store.get_tile_mut(&grid_pos) {
+                if let Some(tile) = tile_store.get_tile_mut(&grid_pos.to_vec2()) {
                     if tile.tile_type.is_solid() {
                         println!("Digging tile at {:?}", grid_pos);
                         // Find the entity for this tile to update its visual
                         for (entity, tile) in tile_query.iter() {
-                            if tile.position == grid_pos {
+                            if tile.position == grid_pos.to_vec2() {
                                 tile_update_events.send(TileUpdateEvent {
                                     entity,
                                     new_type: Box::new(AirTile),
@@ -149,12 +157,14 @@ pub fn ant_movement(
 
                         // Move towards the dug tile
                         velocity.linvel = dig_direction * ANT_SPEED * 0.5; // Move slower while digging
+                    } else {
+                        // If the tile is already dug, move towards it
+                        velocity.linvel = dig_direction * ANT_SPEED;
                     }
                 }
                 continue;
             }
 
-            // Rest of the movement code...
             // Check if we're close enough to the final destination
             let distance_to_target = (target_pos - current_pos).length();
             if distance_to_target < 5.0 {
@@ -182,16 +192,7 @@ pub fn ant_movement(
                 {
                     println!("Found nearest accessible point at {:?}", accessible_point);
 
-                    // If we're at the accessible point, start digging
-                    let distance_to_accessible = (accessible_point - current_pos).length();
-                    if distance_to_accessible < 5.0 {
-                        println!("Reached accessible point, starting to dig towards target");
-                        ant.worker_state = WorkerState::Digging(target_pos);
-                        velocity.linvel = Vec2::ZERO;
-                        continue;
-                    }
-
-                    // Otherwise, find a path to the accessible point
+                    // Find a path to the accessible point
                     if let Some(path) = find_path(current_pos, accessible_point, &solid_tiles) {
                         println!(
                             "Found path with {} waypoints to accessible point",
@@ -221,6 +222,26 @@ pub fn ant_movement(
                 let next_waypoint = ant.current_path.as_ref().unwrap()[current_index];
                 let to_target = next_waypoint - current_pos;
                 let distance = to_target.length();
+
+                // Check if we need to dig to reach the next waypoint
+                let next_pos = GridPos::from_vec2(next_waypoint);
+                let solid_tiles = tile_store.get_solid_tiles();
+
+                // Check for solid tiles in a small area around the next waypoint
+                let needs_digging = solid_tiles.iter().any(|&pos| {
+                    let tile_pos = GridPos::from_vec2(pos);
+                    let dx = (tile_pos.x - next_pos.x).abs();
+                    let dy = (tile_pos.y - next_pos.y).abs();
+                    // Check if the tile is adjacent to or at the next waypoint
+                    dx <= 1 && dy <= 1
+                });
+
+                if needs_digging {
+                    println!("Need to dig to reach next waypoint at {:?}", next_waypoint);
+                    ant.worker_state = WorkerState::Digging(next_waypoint);
+                    velocity.linvel = Vec2::ZERO;
+                    continue;
+                }
 
                 // Increased threshold for waypoint detection
                 if distance < 2.0 {
