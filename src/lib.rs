@@ -15,7 +15,7 @@ pub fn run_app() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Ant Farm".to_string(),
+                title: "Ant 123 Farm".to_string(),
                 resolution: (800., 600.).into(),
                 ..default()
             }),

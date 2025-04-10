@@ -10,10 +10,12 @@ help:
 	@echo "Targets:"
 	@echo "  help        Show this help message"
 	@echo "  wasm        Build for WebAssembly"
+	@echo "  wasm-dev    Build for WebAssembly (fast development build)"
 	@echo "  native      Build for native platform"
 	@echo "  run         Run the native build"
 	@echo "  all         Build for both WASM and native"
 	@echo "  serve       Serve the WASM build locally"
+	@echo "  watch       Serve with auto-rebuild on file changes"
 	@echo "  check       Check if WASM build is valid"
 	@echo "  test        Test the WASM build with a simple server"
 	@echo "  clean       Clean build artifacts (except Bevy dependencies)"
@@ -27,6 +29,16 @@ wasm:
 	@mkdir -p public/pkg
 	@cp -r pkg/* public/pkg/
 	@echo "WASM build complete. Output in public/pkg directory."
+
+# Build for WebAssembly (fast development build)
+.PHONY: wasm-dev
+wasm-dev:
+	@echo "Building for WebAssembly (fast development build)..."
+	RUSTFLAGS="-C link-arg=-s" wasm-pack build --dev --target web
+	@echo "Copying WASM files to public directory..."
+	@mkdir -p public/pkg
+	@cp -r pkg/* public/pkg/
+	@echo "WASM development build complete. Output in public/pkg directory."
 
 # Check if WASM build is valid
 .PHONY: check
@@ -96,6 +108,17 @@ serve:
 	fi
 	@echo "Starting server..."
 	./serve.py
+
+# Serve with auto-rebuild on file changes
+.PHONY: watch
+watch:
+	@echo "Starting development server with auto-rebuild..."
+	@if [ ! -f "watch.py" ]; then \
+		echo "watch.py not found! Please ensure it exists in the project root."; \
+		exit 1; \
+	fi
+	@chmod +x watch.py
+	@./watch.py
 
 # Clean build artifacts (except Bevy dependencies)
 .PHONY: clean
