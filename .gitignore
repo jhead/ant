@@ -4,8 +4,8 @@
 Cargo.lock
 
 # WASM build artifacts
-/pkg/
-/dist/
+pkg/
+dist/
 
 # IDE specific files
 .idea/
