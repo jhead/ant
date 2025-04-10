@@ -181,8 +181,12 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_rapier2d",
+ "console_error_panic_hook",
+ "js-sys",
  "noise",
  "rand 0.8.5",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

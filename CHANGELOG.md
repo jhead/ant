@@ -39,6 +39,18 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - New spacebar spawn system to create additional worker ants
 - Enhanced logging for ant spawning and movement
 - Improved ant movement system with better pathfinding
+- WebAssembly support for playing the game in the browser
+- GitHub Actions workflow for automatic WASM deployment to GitHub Pages
+- Standalone index.html and 404.html files for WASM deployment
+- Build script for both WASM and native builds
+- Replaced build.sh script with a standard Makefile for better build system integration
+- Added comprehensive Makefile targets for building, running, and testing
+- Added detailed README.md with build instructions and project structure
+- Added GitHub Actions workflow for automated WASM deployment
+- Added support for both native and WASM builds
+- Added local development server for testing WASM builds
+- Added build validation checks for WASM output
+- Added clean target to remove build artifacts
 
 ### Changed
 
@@ -53,6 +65,7 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
   - `src/ant/components.rs`: Ant-related components and constants
   - `src/ant/systems.rs`: Systems for ant movement and interaction
   - `src/ant/behaviors.rs`: Core ant behavior logic
+  - `src/ant/app.rs`: Application setup for both WASM and native builds
 - Improved code organization and maintainability
 - Enhanced ant movement and digging behavior
 - Added better logging for ant state changes and actions
@@ -70,6 +83,21 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - Updated terrain generation to use tile types for better extensibility
 - Modified cavity creation to convert tiles to air instead of removing them
 - Improved tile rendering with type-specific colors
+- Modified main.rs to support both native and WASM targets
+- Restructured project to use lib.rs as the main entry point for WASM
+- Simplified GitHub Actions workflow to use existing HTML files
+- Unified application setup for both WASM and native builds
+- Reorganized HTML files into a public directory for better deployment structure
+- Updated build scripts to handle the new public directory structure
+- Enhanced GitHub Actions workflow to properly deploy from the public directory
+- Removed clean option from build script to avoid long Bevy rebuilds
+- Eliminated duplication between serve_wasm.sh and serve.py
+- Consolidated all build and test scripts into a single build.sh file
+- Replaced build.sh with a standard Makefile for better build system integration
+- Simplified build process with standardized Makefile commands
+- Improved documentation with detailed project structure
+- Enhanced GitHub Actions workflow to use Makefile
+- Updated README with comprehensive build and development instructions
 
 ### Fixed
 
@@ -82,12 +110,17 @@ All notable changes to the Ant Farm Simulation project will be documented in thi
 - Improved collision detection and pathfinding accuracy
 - Resolved HashMap key issues with Vec2 by implementing custom Hash and Eq traits
 - Fixed terrain generation to properly handle tile type conversion
+- Fixed duplicate run_app function issue by moving it to ant/app.rs
 
 ### Technical Debt
 
 - Several unused imports and variables need to be cleaned up
 - Some struct fields and enum variants are currently unused and will be implemented in future updates
 - Physics plugins were removed as they're not currently being used
+- Removed redundant build scripts in favor of Makefile
+- Consolidated build process into a single Makefile
+- Improved build system maintainability
+- Enhanced documentation structure
 
 ### Performance Improvements
 

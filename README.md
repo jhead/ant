@@ -1,55 +1,100 @@
 # Ant Farm Simulation
 
-A 2D ant farm simulation game built with Bevy, where you can observe and interact with an ant colony as it explores and builds in a procedurally generated world.
+A procedurally generated ant farm simulation game built with Bevy and Rust.
 
 ## Features
 
 - Procedurally generated terrain with different layers (Surface, Dirt, Stone, Deep, Bedrock)
 - Terrain features including caves, water pockets, resource veins, and tunnels
+- Ant colony simulation with worker ants that dig and explore
 - Camera controls for exploring the world
-- Ant colony simulation (in development)
-- Resource management system (in development)
-
-## Controls
-
-- **Arrow Keys**: Move the camera around the world
-- **ESC**: Exit the game
+- Chunk-based terrain loading system
+- WebAssembly support for playing in the browser
 
 ## Getting Started
 
 ### Prerequisites
 
-- Rust (latest stable version)
-- Cargo (comes with Rust)
+- Rust and Cargo (latest stable version)
+- wasm-pack (for WebAssembly builds)
+- Python 3 (for local development server)
 
-### Installation
+### Building and Running
 
-1. Clone the repository:
+The project uses a Makefile for building and running. Here are the available commands:
 
-   ```
-   git clone https://github.com/yourusername/ant-farm.git
-   cd ant-farm
+```bash
+# Show help
+make help
+
+# Build for WebAssembly
+make wasm
+
+# Build for native platform
+make native
+
+# Build for both WASM and native
+make all
+
+# Run the native build
+make run
+
+# Serve the WASM build locally
+make serve
+
+# Check if WASM build is valid
+make check
+
+# Test the WASM build with a simple server
+make test
+
+# Clean build artifacts (except Bevy dependencies)
+make clean
+```
+
+### Development Workflow
+
+1. Build the project:
+
+   ```bash
+   make all
    ```
 
-2. Build and run the game:
+2. Run the native version:
+
+   ```bash
+   make run
    ```
-   cargo run
+
+3. Serve the WASM version locally:
+
+   ```bash
+   make serve
    ```
+
+4. Open your browser and navigate to http://localhost:8000
+
+## Controls
+
+- **WASD**: Move camera
+- **Space**: Spawn new worker ants
+- **Mouse Click**: Command ants to move to a location
 
 ## Project Structure
 
-- `src/ant.rs`: Ant behavior and properties
-- `src/colony.rs`: Colony management and ant spawning
-- `src/resources.rs`: Resource types and management
-- `src/world/`: World generation and management
-  - `camera.rs`: Camera controls and setup
-  - `terrain.rs`: Terrain generation and chunk management
-  - `ui.rs`: User interface elements
-  - `resources.rs`: World resources and obstacles
-
-## Development Status
-
-This project is currently in early development. The terrain generation system is functional, but the ant colony simulation is still being implemented.
+- `src/`: Source code
+  - `ant/`: Ant-related code
+    - `mod.rs`: Main module file with plugin setup
+    - `components.rs`: Ant-related components and constants
+    - `systems.rs`: Systems for ant movement and interaction
+    - `behaviors.rs`: Core ant behavior logic
+    - `app.rs`: Application setup for both WASM and native builds
+  - `colony/`: Colony-related code
+  - `terrain/`: Terrain-related code
+- `public/`: Web deployment files
+  - `index.html`: Main HTML file for WASM deployment
+  - `404.html`: 404 page for GitHub Pages
+  - `pkg/`: WASM build output
 
 ## License
 

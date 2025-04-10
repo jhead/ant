@@ -2,6 +2,7 @@ use super::components::*;
 use bevy::prelude::*;
 use rand::Rng;
 
+#[allow(dead_code)]
 pub fn find_dig_target(
     current_pos: Vec2,
     _colony_pos: Vec2,
@@ -58,6 +59,7 @@ pub fn find_dig_target(
     closest_dirt
 }
 
+#[allow(dead_code)]
 pub fn find_search_direction(
     current_pos: Vec2,
     _colony_pos: Vec2,
@@ -109,6 +111,7 @@ pub fn find_search_direction(
     }
 }
 
+#[allow(dead_code)]
 pub fn handle_worker_work(
     current_pos: Vec2,
     colony_pos: Vec2,
@@ -164,6 +167,7 @@ pub fn handle_worker_work(
     }
 }
 
+#[allow(dead_code)]
 pub fn handle_move_command(current_pos: Vec2, target_pos: Vec2, direction: &mut Vec2) -> bool {
     let distance = current_pos.distance(target_pos);
     if distance < COMMAND_COMPLETE_DISTANCE {
