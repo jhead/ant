@@ -5,7 +5,9 @@ mod systems;
 
 pub use app::run_app;
 use bevy::prelude::*;
-use systems::{ant_movement, handle_mouse_click, handle_spacebar_spawn, spawn_initial_ant};
+use systems::ant_movement::ant_movement;
+use systems::mouse_click::handle_mouse_click;
+use systems::{handle_spacebar_spawn, spawn_initial_ant};
 
 pub struct AntPlugin;
 
